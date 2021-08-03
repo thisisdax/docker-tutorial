@@ -1,7 +1,368 @@
-import React from 'react';
+import React, { useState } from 'react';
+import md5 from 'md5';
+import shortid from 'shortid';
+import { makeStyles } from '@material-ui/core/styles';
+import Box from '@material-ui/core/Box';
+import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
+import Button from '@material-ui/core/Button';
+import Divider from '@material-ui/core/Divider';
+import Typography from '@material-ui/core/Typography';
+
+const useStyles = makeStyles((theme) => ({
+  host: {
+    // backgroundColor: blue
+  },
+  container: {
+    backgroundColor: '#0096FF',
+    color: 'white',
+  },
+  grey: {
+    backgroundColor: '#D5D5D5',
+  },
+  button: {
+    textTransform: 'none',
+    marginBottom: '1rem',
+  },
+  divider: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+  },
+  marginBottom: {
+    marginBottom: theme.spacing(2),
+  },
+  root: {
+    flexGrow: 1,
+    height: 'auto',
+    marginTop: '1rem',
+    marginBottom: '1rem',
+    textAlign: 'center',
+  },
+  paper: {
+    padding: theme.spacing(2),
+    textAlign: 'center',
+    height: '100%',
+  },
+}));
+
+const useStylesButton = ({first, second, third}) => makeStyles((theme) => ({
+  first: {
+    backgroundColor: !first.run ? '#0096FF' : '#FF69B4',
+    textTransform: 'none',
+  },
+  second: {
+    backgroundColor: !second.run ? '#0096FF' : '#FF69B4',
+    textTransform: 'none',
+  },
+  third: {
+    backgroundColor: !third.run ? '#0096FF' : '#FF69B4',
+    textTransform: 'none',
+  },
+  firstContainer: {
+    backgroundColor: first.run ? '#0096FF' : '#D5D5D5',
+  },
+  secondContainer: {
+    backgroundColor: second.run ? '#0096FF' : '#D5D5D5',
+  },
+  thirdContainer: {
+    backgroundColor: third.run ? '#0096FF' : '#D5D5D5',
+  },
+}));
+
+function Mount(props) {
+  const classes = useStyles();
+  const { active, dangling, container, name, hash } = props;
+  return (
+    <Paper className={`${classes.paper} ${active ? classes.container : classes.grey} ${classes.marginBottom}`}>
+      <Box>
+        <Typography variant="subtitle1">Volume{active ? ' - Active' : ' - Inactive'}{dangling ? ' - Dangling' : null}</Typography>
+        <Divider className={classes.divider} />
+        <Typography>Volume state: {container}</Typography>
+        <Typography variant="body1">{name ? '/home/mount/data' : `/var/lib/docker/volumes/${hash}/_data`}</Typography>
+      </Box>
+    </Paper>
+  )
+}
+
+function Container(props) {
+  const classes = useStyles();
+  const { state, setState, color } = props;
+  return (
+    <Paper className={`${classes.paper} ${classes.container} ${color}`}>
+      <Box>
+        <Typography variant="subtitle1">Container: mysql</Typography>
+        <Typography variant="subtitle1">Status: {state.run ? 'Running' : 'Stopped'}</Typography>
+        <Divider className={classes.divider} />
+        <Button
+          variant="contained"
+          className={classes.button}
+          onClick={() => {
+            if (!state.run) return;
+            const newContainer = state.container;
+            newContainer[0] += 1
+            setState({
+              ...state,
+              container: newContainer,
+            })
+          }}
+        >
+          Update Container State
+        </Button>
+        <Typography>Database state: { state.container[0] }</Typography>
+        { state.mount ? <Typography variant="body1">Storage Location: /var/lib/mysql/data</Typography> : null }
+      </Box>
+    </Paper>
+  )
+}
+
+function Host(props) {
+  const classes = useStyles();
+  const { created, mount, hash, container, run } = props.state;
+  return (
+    <Paper className={classes.paper}>
+      <Box>
+        <Typography variant="subtitle1">Host</Typography>
+        <Divider className={classes.divider} />
+        { created ? <Container {...props}/> : <Typography variant="body1">No Container</Typography> }
+        <br />
+        <Typography>{ mount ? hash.map((id, i) => <Mount {...props} dangling={i > 0 || !created} active={i === 0 && run} container={container[i]} hash={hash[i]}/>): 'No Volume Mounted'}</Typography>
+        <Typography>Default Storage Driver: /var/lib/docker/overlay2</Typography>
+      </Box>
+    </Paper>
+  )
+}
 
 export default function Volume() {
+  const containerState = {
+    created: false,
+    run: false,
+    mount: false,
+    container: [],
+    hash: [],
+  }
+  const [ first, firstSetState ] = useState(containerState);
+  const [ second, secondSetState ] = useState(containerState);
+  const [ third, thirdSetState ] = useState({...containerState, container: [0], hash: ['mysql_volume']});
+
+  const classes = useStyles();
+  const buttons = useStylesButton({first, second, third})();
+
   return (
-    <div>volume</div>
+    <Box>
+      <Typography variant="h1" noWrap>
+        Docker Volumes
+      </Typography>
+      <br/>
+      <Typography variant="body1">
+        Docker Volumes are used for persisting data generated by and used by Docker containers.
+        When a container stops, all data not persisted in a volume will no longer be available.
+        An example would be a container running a database, a volume is required to have data
+        persistence in the event that the container crashes or stops running.
+      </Typography>
+      <br/>
+      <Typography variant="body1">
+        Docker volumes on windows are always created in the path of the graph driver,
+        which is where Docker stores all image layers, writable container layers and volumes.
+        By default the root of the graph driver in Windows is C:\ProgramData\docker,
+        in Linux and MacOS is in /var/lib/docker/volumes but you can choose to mount a volume
+        to any specific directory when you run a container.
+      </Typography>
+      <br/>
+      <Divider className={classes.divider} />
+      <Box>
+        <Grid
+          container
+          className={classes.root}
+          justifyContent="center"
+          spacing={2}
+        >
+          <Grid item xs={6}>
+            <Host state={first} setState={firstSetState} color={buttons.firstContainer} />
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="subtitle1">Run container without volume</Typography>
+            {!first.created ? <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.first}`}
+                onClick={() => firstSetState({
+                  ...first,
+                  created: true,
+                  run: !first.run,
+                  container: first.created ? first.container : [0]
+                })}
+              >
+                {first.run ? '>> docker stop mysql' : '>> docker run --name mysql mysql'}
+              </Button>
+              : <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.first}`}
+                onClick={() => firstSetState({
+                  ...first,
+                  created: true,
+                  run: !first.run,
+                  container: first.created ? first.container : [0]
+                })}
+              >
+                {first.run ? '>> docker stop mysql' : '>> docker start mysql'}
+              </Button>
+            }
+            {first.created ?
+              <Box>
+                <Typography variant="subtitle1">Remove container</Typography>
+                <Button
+                  variant="contained"
+                  className={`${classes.button} ${buttons.first}`}
+                  disabled={!first.created}
+                  onClick={() => firstSetState(containerState)}
+                >
+                  {!first.run ? '>> docker rm mysql' : '>> docker rm --force mysql'}
+                </Button>
+              </Box> : null
+            }
+          </Grid>
+        </Grid>
+      </Box>
+      <Divider className={classes.divider} />
+      <Box>
+        <Grid
+          container
+          className={classes.root}
+          justifyContent="center"
+          spacing={2}
+        >
+          <Grid item xs={6}>
+            <Host state={second} setState={secondSetState} color={buttons.secondContainer} />
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="subtitle1">Run container with volume</Typography>
+            {!second.created ? <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.second}`}
+                onClick={() => secondSetState({
+                  ...second,
+                  created: true,
+                  run: !second.run,
+                  mount: true,
+                  container: second.created ? [...second.container] : [0, ...second.container],
+                  hash: [md5(shortid.generate()), ...second.hash],
+                })}
+              >
+                {second.run ? '>> docker stop mysql' : '>> docker run --name mysql --volume /var/lib/mysql/data mysql'}
+              </Button>
+              : <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.second}`}
+                onClick={() => secondSetState({
+                  ...second,
+                  run: !second.run,
+                  container: [...second.container],
+                  hash: [...second.hash],
+                })}
+              >
+                {second.run ? '>> docker stop mysql' : '>> docker start mysql'}
+              </Button>
+            }
+            {second.created ?
+              <Box>
+                <Typography variant="subtitle1">Remove container</Typography>
+                <Button
+                  variant="contained"
+                  className={`${classes.button} ${buttons.second}`}
+                  disabled={!second.created}
+                  onClick={() => secondSetState({...containerState, mount: true, container: second.container, hash: second.hash})}
+                >
+                  {!second.run ? '>> docker rm mysql' : '>> docker rm --force mysql'}
+                </Button>
+              </Box> : null
+            }
+            <Box>
+              <Typography variant="subtitle1">Remove unused data</Typography>
+              <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.second}`}
+                onClick={() => second.run ? secondSetState({...second, container: [second.container[0]], hash: [second.hash[0]]}) : secondSetState(containerState)}
+              >
+                >> docker system prune --all --volumes --force
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+
+
+
+
+
+
+
+
+      <Divider className={classes.divider} />
+      <Box>
+        <Grid
+          container
+          className={classes.root}
+          justifyContent="center"
+          spacing={2}
+        >
+          <Grid item xs={6}>
+            <Host state={third} setState={thirdSetState} color={buttons.thirdContainer} />
+          </Grid>
+          <Grid item xs={6}>
+            <Typography variant="subtitle1">Run container with named volume</Typography>
+            {!third.created ? <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.third}`}
+                onClick={() => thirdSetState({
+                  ...third,
+                  created: true,
+                  run: !third.run,
+                  mount: true,
+                })}
+              >
+                {third.run ? '>> docker stop mysql' : '>> docker run --name mysql --volume mysql_volume:/var/lib/mysql/data mysql'}
+              </Button>
+              : <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.third}`}
+                onClick={() => thirdSetState({
+                  ...third,
+                  run: !third.run,
+                })}
+              >
+                {third.run ? '>> docker stop mysql' : '>> docker start mysql'}
+              </Button>
+            }
+            {third.created ?
+              <Box>
+                <Typography variant="subtitle1">Remove container</Typography>
+                <Button
+                  variant="contained"
+                  className={`${classes.button} ${buttons.third}`}
+                  disabled={!third.created}
+                  onClick={() => thirdSetState({
+                    ...containerState,
+                    mount: true,
+                    container: third.container,
+                    hash: third.hash,
+                  })}
+                >
+                  {!third.run ? '>> docker rm mysql' : '>> docker rm --force mysql'}
+                </Button>
+              </Box> : null
+            }
+            <Box>
+              <Typography variant="subtitle1">Remove unused data</Typography>
+              <Button
+                variant="contained"
+                className={`${classes.button} ${buttons.third}`}
+                onClick={() => third.run ? thirdSetState({...third, container: [third.container[0]], hash: [third.hash[0]]}) : thirdSetState({...containerState, container: [0], hash:['mysql_volume']})}
+              >
+                >> docker system prune --all --volumes --force
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+    </Box>
   );
 }

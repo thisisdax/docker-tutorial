@@ -36,12 +36,16 @@ const routes = [
       path: '/container',
     },
     {
+      text: 'Volume',
+      path: '/volume',
+    },
+    {
       text: 'Network',
       path: '/network',
     },
     {
-      text: 'Volume',
-      path: '/volume',
+      text: 'Docker Compose',
+      path: '/docker-compose',
     },
   ]
 

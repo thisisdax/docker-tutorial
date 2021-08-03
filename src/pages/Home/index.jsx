@@ -220,12 +220,20 @@ export default function Home() {
   return (
     <Box>
       <Typography variant="h1" noWrap>
-        Learning Docker
+        Docker Tutorial
       </Typography>
       <br/>
       <Typography variant="body1">
-        Learning Docker is a curated list of information that I personally felt most helpful when learning about Docker.
+        This is a curated list of information that I personally felt most helpful when learning about Docker.
         This information is targeted for complete beginners and may also be helpful for intermediate developers who wishes to refresh their knowledge on Docker.
+      </Typography>
+      <br/>
+      <Typography variant="body1">
+        Applications needs to run in an environment and environments can differ in OS, version, hardware etc,
+        logically applications and its technologies with their respective versions should work the same on different
+        environments, however that is often not the case. Docker introduced what would become the industry standard
+        for containers. Containers are a standardized unit of software that allows developers to isolate their app
+        from its environment, solving the “it works on my machine” headache.
       </Typography>
       <br/>
       <Divider/>
